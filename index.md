@@ -4,9 +4,9 @@ I'm Orkan Çelikhisar, and this is my Journal for the IE423 Fall Term.
 
 ## Project Part 1
 
-[here](odev.html) is the .html for Project Part 1. /n
+[here](odev.html) is the .html for Project Part 1.
 
-[here](odev.pdf) is the .pdf for Project Part 1. /n
+[here](odev.pdf) is the .pdf for Project Part 1.
 
 [here](odev.Rmd) is the .Rmd for Project Part 1.
 
