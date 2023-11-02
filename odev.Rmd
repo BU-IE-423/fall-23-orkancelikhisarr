@@ -1,0 +1,302 @@
+---
+title: "IE 423 Project Part 1"
+author: "Baran Kırkgöz & Orkan Çelikhisar"
+date: "2023-10-31"
+output:
+  html_document: default
+  pdf_document: default
+editor_options:
+  markdown:
+    wrap: 72
+---
+## Introduction
+
+In this project, we aim to analyze 6 stocks of Borsa Istanbul and detect outliers by using Boxplot and 3-sigma limits. After this step, we compared each stock with relevant google trends data. For google trends, we used the names of the companie, eg. for MGROS stock data we used "Migros" search volume.
+
+## Identification of Outliers
+
+First necesssary packages and libraries are installed.
+
+```{r setup, include=FALSE}
+install.packages(c("dplyr", "ggplot2", "readr", "tidyverse"))
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(tidyr)
+library(tidyverse)
+library(lubridate)
+```
+
+There are some errors but it is ok.
+
+Now the data is retrieved.
+
+```{r setup2}
+data <- read_csv("all_ticks_wide.csv.gz")
+```
+
+Let's organize the data in choronological order and select 6 sample
+stock.
+
+Banking: Akbank, Is Bankası / Retail: Migros, Arçelik / Energy: Aygaz,
+Tüpraş
+
+```{r setup3}
+
+data <- data %>% arrange(timestamp)
+selected_stocks <- c("AKBNK", "ISCTR", "MGROS", "ARCLK", "AYGAZ", "TUPRS")
+
+
+```
+
+Filter the data for the selected stocks and for a duration of at least 2
+years
+
+```{r setup 4}
+data_filtered <- data %>%
+  select(all_of(c("timestamp", selected_stocks)))
+```
+
+Realize that working with the long format is easier Totally forget the
+fact that the data was given to us in both formats Ask ChatGPT how to
+transform stock data from wide format to long format Convert data to
+long format
+
+```{r setup 5 } 
+data_long <- data_filtered %>%
+  pivot_longer(cols = -timestamp, names_to = "name", values_to = "value")
+
+```
+
+It seems that in the dataset there's a 0.0001 value for every stock at
+the exact same timestamp This is most probably a placeholder To be able
+to conduct an accurate analysis, we have removed the rows with the
+values 0.0001
+
+```{r setup 6 }
+data_long <- data_long %>%
+  filter(value != 0.0001)
+```
+
+Identification of Outliers using Boxplots and 3-Sigma Limits: Generate
+boxplots for the chosen indices
+
+```{r setup 7}
+p <- ggplot(data_long, aes(x = factor(0), y = value)) +
+  geom_boxplot() +
+  facet_wrap(~name, scales = "free") +
+  theme_minimal()
+
+print(p)
+
+
+
+```
+
+# 3-Sigma rule
+
+```{r setup 8}
+outliers <- data_long %>%
+  group_by(name) %>%
+  mutate(month = format(timestamp, "%Y-%m"),
+         mean_price = mean(value, na.rm = TRUE),
+         sd_price = sd(value, na.rm = TRUE),
+         lower_limit = mean_price - 3 * sd_price,
+         upper_limit = mean_price + 3 * sd_price) %>%
+  filter(value < lower_limit | value > upper_limit)
+
+print(outliers)
+
+
+```
+
+After removing the 0.0001 placeholders, according to the 3-Sigma rule
+there are no outliers. Let's try the 3-Sigma rule for monthly variations
+now in order to achieve a higher sensitivity.
+
+# 3-Sigma rule for monthly variations
+
+```{r setup 9}
+
+outliers <- data_long %>%
+  group_by(name, month = format(timestamp, "%Y-%m")) %>%
+  mutate(mean_price = mean(value, na.rm = TRUE),
+         sd_price = sd(value, na.rm = TRUE),
+         lower_limit = mean_price - 3 * sd_price,
+         upper_limit = mean_price + 3 * sd_price) %>%
+  filter(value < lower_limit | value > upper_limit)
+
+outliers
+
+
+```
+
+Now there are a lot of outliers in detailed timestamps. This has allowed
+us to carefully examine and correlate historical events and outliers.
+
+Convert the timestamp to date and then create a 6-monthly grouping
+variable
+
+```{r setup 10}
+data_long <- data_long %>%
+  mutate(date = as.Date(timestamp),
+         six_month_period = ifelse(month(date) %in% 1:6, paste(year(date), "H1", sep="-"), paste(year(date), "H2", sep="-")))
+
+
+
+```
+
+# 3-Sigma rule for 6-monthly variations
+
+```{r setup 11}
+
+outliers_6months <- data_long %>%
+  group_by(name, six_month_period) %>%
+  mutate(mean_price = mean(value, na.rm = TRUE),
+         sd_price = sd(value, na.rm = TRUE),
+         lower_limit = mean_price - 3 * sd_price,
+         upper_limit = mean_price + 3 * sd_price) %>%
+  filter(value < lower_limit | value > upper_limit)
+
+outliers_6months
+
+```
+
+Now there are much less outliers but still not a very small amount
+
+Judging from the outliers we've received, we can actually observe the
+mid-2019 stock price peaks of Migros due to covid-19, as well as the
+fluctuations of Akbank and Isbank due to the instability of the TRY
+exchange rate and the rash economic policies that were followed by the
+Turkish Central Bank.
+
+I personally was interested to see the effect of the total IT
+Malfunction of Akbank on July 2021, though it seems the dataset is not
+up-to-date.
+
+# Google Trends Data 
+Now to investigate the relationship between stocks and search volume of the related words the google trends data will be analyzed for each of the selected stock. The google trends data and the stock data will be analyzed to understand whether there is a correlation between them. 
+
+## Akbank
+To understand Akbank stock data, the keyword "Akbank" is selected for the years between 2012-2019. As it can be seen from the two graphs, there is no significant relationship between the trend of AKBNK stock and Akbank search volume on google. 
+
+```{r setup 12}
+g <- ggplot(data_filtered, aes(x=timestamp, y=AKBNK)) +
+  geom_line()
+g
+```
+
+
+```{r setup 13}
+AKBNK_data <- read_csv("multiTimeline (4).csv")
+AKBNK_data$Ay<- ym(AKBNK_data$Ay)
+a <- ggplot(AKBNK_data, aes(x=Ay, y=AKBNK)) +
+  geom_line()
+a
+
+```
+
+
+```{r setup 14}
+x <- ggplot(data_filtered, aes(x=timestamp, y=ISCTR)) +
+  geom_line()
+x
+````
+
+## ISCTR Data
+
+When the same analysis is performed for ISCTR stock, the positive coveriance around year 2018-2019 can be seen. Most probably İş Bankası was performing very well after 2018 and the effect of it can be seen on graphs. 
+
+
+```{r setup 15}
+ISCTR_data <- read_csv("multiTimeline (5).csv")
+ISCTR_data$Ay<- ym(ISCTR_data$Ay)
+ISCTRgraph <- ggplot(ISCTR_data, aes(x=Ay, y=ISCTR)) +
+  geom_line()
+ISCTRgraph
+```
+
+```{r setup 16}
+y <- ggplot(data_filtered, aes(x=timestamp, y=ISCTR)) +
+  geom_line()
+y
+```
+
+## MGROS 
+
+When two graphs are analyzed, the covarience till 2018 can be detected. After 2018, the MGROS stock continues to climb whereas search volume of Migros starts to decline.
+
+
+```{r setup 17}
+MGROS_data <- read_csv("multiTimeline (6).csv")
+MGROS_data$Ay<- ym(MGROS_data$Ay)
+MGROSgraph <- ggplot(MGROS_data, aes(x=Ay, y=MGROS)) +
+  geom_line()
+MGROSgraph
+````
+
+```{r setup 30}
+l <- ggplot(data_filtered, aes(x=timestamp, y=MGROS)) +
+  geom_line()
+l
+```
+
+
+
+## ARCLK
+
+Except years2018-  2019, both of the graphs are very similiar. The high coveriance can be seen easily. They both start to incline from 2012 till 2018 with little fluctuations. In 2018-2019 the search volume still increases wheras the stock goes down. 
+
+```{r setup 18}
+k <- ggplot(data_filtered, aes(x=timestamp, y=ARCLK)) +
+  geom_line()
+k
+```
+
+
+
+```{r setup 19}
+ARCLK_data <- read_csv("multiTimeline (7).csv")
+ARCLK_data$Ay<- ym(ARCLK_data$Ay)
+ARCLKgraph <- ggplot(ARCLK_data, aes(x=Ay, y=ARCLK)) +
+  geom_line()
+ARCLKgraph
+```
+
+## AYGAZ
+
+The relationship between Aygaz stock and search volume is really strong. The graphs are very similiar expect the peak level of search volume in 2020. 
+
+```{r setup 20}
+m <- ggplot(data_filtered, aes(x=timestamp, y=AYGAZ)) +
+  geom_line()
+m
+```
+
+
+
+```{r setup 21}
+AYGAZ_data <- read_csv("multiTimeline (8).csv")
+AYGAZ_data$Ay<- ym(AYGAZ_data$Ay)
+AYGAZgraph <- ggplot(AYGAZ_data, aes(x=Ay, y=AYGAZ)) +
+  geom_line()
+AYGAZgraph
+```
+
+
+## TUPRS
+
+The two graphs are very similar after 2016, both of them start to increase with varience.
+```{r setup 22}
+n <- ggplot(data_filtered, aes(x=timestamp, y=TUPRS)) +
+  geom_line()
+n
+```
+
+```{r setup 23}
+TUPRS_data <- read_csv("multiTimeline (9).csv")
+TUPRS_data$Ay<- ym(TUPRS_data$Ay)
+TUPRSgraph <- ggplot(TUPRS_data, aes(x=Ay, y=TUPRS)) +
+  geom_line()
+TUPRSgraph
+```
