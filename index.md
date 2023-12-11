@@ -10,8 +10,16 @@ I'm Orkan Çelikhisar, and this is my Journal for the IE423 Fall Term.
 
 [here](odev.Rmd) is the .Rmd for Project Part 1.
 
-<!-- ### Markdown
+## Project Part 2
 
+[here](part2.html) is the .html for Project Part 2.
+
+[here](part2.pdf) is the .pdf for Project Part 2.
+
+[here](part2.Rmd) is the .Rmd for Project Part 2.
+
+<!-- ### Markdown
+w
 Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
 
 ```markdown
